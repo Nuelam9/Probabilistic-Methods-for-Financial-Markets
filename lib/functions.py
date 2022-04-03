@@ -7,7 +7,7 @@ from scipy.stats import norm
 import statsmodels.api as sm
 import pandas_datareader as pdr # Work only on ubuntu
 import matplotlib.pyplot as plt
-from statsmodels.tsa.stattools import acf
+from statsmodels.tsa.stattools import acf, pacf
 from matplotlib.ticker import FormatStrFormatter
 from sklearn.linear_model import LinearRegression
 
@@ -89,8 +89,10 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
     """
     if kind == 'scatter':
         marker = '.'
+        ms = 3
     elif kind == 'line':
         marker = '-'
+        ms = 1
     
     if column == 'Adj Close':
         ylabel = 'Adjusted Close'
@@ -113,7 +115,7 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
     n = len(y)
     fig, ax = plt.subplots(figsize=(15, 9), constrained_layout=True)
     dates = df['Date']
-    plt.plot(dates, y, 'b' + marker, markersize=3, label=f'S&P 500 {ylabel}')
+    plt.plot(dates, y, 'b' + marker, markersize=ms, label=f'S&P 500 {ylabel}')
     plt.plot(dates, X*reg.coef_[0] + reg.intercept_, 'lime', label='Regression Line')
     plt.plot(dates, yest_sm, 'r--', label='LOESS Curve')
     first_day = df.loc[0, 'Date']
@@ -136,14 +138,23 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
                 + f"{symbol} - {link}")
 
 
-def autocorrelogram_plot(df: pd.DataFrame, symbol: str, link: str,
-                         column: str = 'y_plr', lag_method: str = 'Hyndman') -> None:
-    """Autocorrelogram plot of a given variable inside column.
+def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
+                    partial: bool = False, squared: bool = False, 
+                    column: str = 'y_plr',
+                    lag_method: str = 'Hyndman') -> None:
+    """Autocorrelogram/Partial Autocorrelogram plot of a given variable
+       inside column.
 
     Args:
-        df (pd.DataFrame): _description_
-        column (str, optional): _description_. Defaults to 'y_plr'.
-        lag_method (str, optional): _description_. Defaults to 'Hyndman'.
+        df (pd.DataFrame): data,
+        symbol (str): Stock index, 
+        link (str): link at with the data are taken,
+        partial (bool, optional): to choose between the autocorrelogram
+                                  and the partial autocorrelogram.
+                                  Defaults to False,
+        column (str, optional): df's column to plot. Defaults to 'y_plr',
+        lag_method (str, optional): method to compute the maxlag.
+                                    Defaults to 'Hyndman'.
     """
     z = df[column].to_numpy()
     n = len(z)
@@ -155,12 +166,29 @@ def autocorrelogram_plot(df: pd.DataFrame, symbol: str, link: str,
     elif lag_method == 'Hyndman':
         maxlag = np.min((n / 4., 10.))
 
-    # fft = False to avoid warning
-    Aut_Fun_z = acf(z, nlags=maxlag, fft=False)
+    string = ' '
+    if partial:
+        kind = 'Partial Autocorrelogram'
+        ylabel = 'Pacf value'
+        Aut_Fun_z = pacf(z, nlags=maxlag)[1:]
+        start = 1
+        yticks = np.arange(-0.1, 0.1, 0.1)
+    else:
+        kind = 'Autocorrelogram'
+        ylabel = 'Acf value'
+
+        if squared:
+            z = df[column].to_numpy() ** 2.
+            string = ' Squared'            
+
+        # fft = False to avoid warning
+        Aut_Fun_z = acf(z, nlags=maxlag, fft=False)
+        start = 0
+        yticks = np.arange(0, 1.25, 0.25)
 
     fig, ax = plt.subplots(figsize=(15, 8))
     plt.grid()
-    for i, y in enumerate(Aut_Fun_z):
+    for i, y in enumerate(Aut_Fun_z, start=start):
         if y > 0:
             plt.vlines(x=i, ymax=y, ymin=0, colors='k')
         elif y < 0:
@@ -174,16 +202,17 @@ def autocorrelogram_plot(df: pd.DataFrame, symbol: str, link: str,
 
     first_day = df.loc[0, 'Date']
     last_day = df.loc[n - 1, 'Date']
-    leg = plt.legend()
+    #fig.subplots_adjust(bottom=0.25)
+    leg = plt.legend(loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=3)
     fancy_legend(leg)
     plt.xlabel('Lag')
-    plt.ylabel('Acf value')   
+    plt.ylabel(ylabel)   
     plt.suptitle("University of Roma \"Tor Vergata\" - Corso di Metodi"
                + " Probabilistici e Statistici per i Mercati Finanziari \n"
-               + " Autocorrelogram of S&P 500 Percentage Logarithm Returns"
+               + f" {kind} of S&P 500{string}Percentage Logarithm Returns"
                + f" from {first_day} to {last_day}")
     plt.title(f"Path length {n} sample points. Data from Yahoo Finance " 
               + f"{symbol} - {link}")
-    ax.set_xticks(range(n + 1))
-    ax.set_yticks(np.arange(0, 1.25, 0.25))
-    plt.xlim((-0.5, n + 0.5))
+    ax.set_xticks(range(start, int(maxlag) + 1))
+    ax.set_yticks(yticks)
+    plt.xlim((-0.5 + start, maxlag + 0.5))
