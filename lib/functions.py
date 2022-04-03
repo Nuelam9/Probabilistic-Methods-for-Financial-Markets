@@ -2,10 +2,14 @@
 import datetime
 import numpy as np
 import pandas as pd
+from typing import Tuple
 from scipy.stats import norm
+import statsmodels.api as sm
 import pandas_datareader as pdr # Work only on ubuntu
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf
+from matplotlib.ticker import FormatStrFormatter
+from sklearn.linear_model import LinearRegression
 
 
 def read_data_from_yahoo(symbol: str, start: datetime.date,
@@ -27,13 +31,16 @@ def read_data_from_yahoo(symbol: str, start: datetime.date,
     return df
 
 
-def log_return(df: pd.DataFrame, column : str = 'Adj Close') -> None:
+def log_return(df: pd.DataFrame, column : str = 'Adj Close') -> pd.DataFrame:
     """Compute the logarithm return.
 
     Args:
         df (pd.DataFrame): data,
         column (str, optional): adjusted value for which compute the 
                                 logarithm return. Defaults to 'Adj Close'.
+    Returns:
+        pd.DataFrame: Dataframe with logarithm return and the percentage
+        logarithm return, without nan.
     """
     # Compute the logarithm return
     y_log = np.log(df[column])
@@ -43,6 +50,7 @@ def log_return(df: pd.DataFrame, column : str = 'Adj Close') -> None:
     # Remove all the rows containing nan 
     mask = ~df.isna().any(axis=1)
     df = df[mask].reset_index(drop=True)
+    return df
 
 
 def fancy_legend(leg):
@@ -50,6 +58,82 @@ def fancy_legend(leg):
         lh.set_alpha(1)
         lh.set_linewidth(1)
 
+
+def fancy_binwidth(df: pd.DataFrame, col: str = 'y_plr',
+                   x_breaks_num: int = 15,
+                   y_breaks_num: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+    x = df.index
+    x_breaks_low = min(x)
+    x_breaks_up = max(x)
+    x_binwidth = np.ceil((x_breaks_up - x_breaks_low) / x_breaks_num)
+    x_breaks = np.arange(x_breaks_low, x_breaks_up, x_binwidth, dtype='int')
+
+    y = df[col]
+    y_binwidth = round((max(y) - min(y)) / y_breaks_num, 3)
+    y_breaks_low = np.floor((min(y) / y_binwidth)) * y_binwidth
+    y_breaks_up = np.ceil((max(y) / y_binwidth)) * y_binwidth
+    y_breaks = np.round(np.arange(y_breaks_low, y_breaks_up, y_binwidth), 3)
+    return x_breaks, y_breaks
+
+
+def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
+                       link: str, column : str = 'y_plr') -> None:
+    """Scatter plot of column variable with the regression line and 
+       the LOESS curve.
+
+    Args:
+        df (pd.DataFrame): data,
+        symbol (str): Stock index, 
+        link (str): link at with the data are taken,
+        column (str, optional): df's column to plot. Defaults to 'y_plr'.
+    """
+    if kind == 'scatter':
+        marker = '.'
+    elif kind == 'line':
+        marker = '-'
+    
+    if column == 'Adj Close':
+        ylabel = 'Adjusted Close'
+        title = ylabel
+    elif column == 'y_plr':
+        ylabel = 'percentage logarithm returns'
+        title = 'Percentage Logarithm Returns'
+
+    x = df.index.to_numpy()
+    y = df[column].to_numpy()
+
+    lowess_sm = sm.nonparametric.lowess
+    yest_sm = lowess_sm(y, x, frac=1./3., it=3, return_sorted = False)
+
+    X = x.reshape((-1, 1))
+
+    reg = LinearRegression().fit(X, y)
+    print(f'Intercept: {reg.intercept_}, Index: {reg.coef_[0]}')
+
+    n = len(y)
+    fig, ax = plt.subplots(figsize=(15, 9), constrained_layout=True)
+    dates = df['Date']
+    plt.plot(dates, y, 'b' + marker, markersize=3, label=f'S&P 500 {ylabel}')
+    plt.plot(dates, X*reg.coef_[0] + reg.intercept_, 'lime', label='Regression Line')
+    plt.plot(dates, yest_sm, 'r--', label='LOESS Curve')
+    first_day = df.loc[0, 'Date']
+    last_day = df.loc[n - 1, 'Date']
+    leg = plt.legend()
+    fancy_legend(leg)
+    x_breaks, y_breaks = fancy_binwidth(df, column)
+    plt.grid()
+    plt.xlabel('Dates')
+    plt.ylabel(f'S&P 500 {ylabel}')
+    # One tick for month 
+    plt.xticks(dates[x_breaks], rotation=45)
+    plt.yticks(y_breaks)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    plt.suptitle("University of Roma \"Tor Vergata\" - Corso di Metodi"
+                + " Probabilistici e Statistici per i Mercati Finanziari \n"
+                + f" {kind.capitalize()} plot of S&P 500" 
+                + f" {title} from {first_day} to {last_day}")
+    plt.title(f"Path length {n} sample points. Data from Yahoo Finance " 
+                + f"{symbol} - {link}")
 
 
 def autocorrelogram_plot(df: pd.DataFrame, symbol: str, link: str,
@@ -100,6 +184,6 @@ def autocorrelogram_plot(df: pd.DataFrame, symbol: str, link: str,
                + f" from {first_day} to {last_day}")
     plt.title(f"Path length {n} sample points. Data from Yahoo Finance " 
               + f"{symbol} - {link}")
-    ax.set_xticks(range(11))
+    ax.set_xticks(range(n + 1))
     ax.set_yticks(np.arange(0, 1.25, 0.25))
-    plt.xlim((-0.5, 10.5))
+    plt.xlim((-0.5, n + 0.5))
