@@ -216,3 +216,21 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
     ax.set_xticks(range(start, int(maxlag) + 1))
     ax.set_yticks(yticks)
     plt.xlim((-0.5 + start, maxlag + 0.5))
+
+
+def linear_regression(x: np.ndarray, y: np.ndarray,
+                        offset: int) -> np.ndarray:
+    """Compute the linear regression given x and y variables.
+
+    Args:
+        x (np.ndarray): x data,
+        y (np.ndarray): y data,
+        offset (int): offset to evaluate linear regeression.
+
+    Returns:
+        np.ndarray: linear regression.
+    """
+    X = x.reshape((-1, 1))
+    reg = LinearRegression().fit(X, y)
+    print(f'Intercept: {reg.intercept_}, Index: {reg.coef_[0]}')
+    return reg.intercept_ + reg.coef_[0] * range(offset + 1)
