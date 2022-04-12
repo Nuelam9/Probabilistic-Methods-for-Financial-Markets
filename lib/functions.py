@@ -31,6 +31,27 @@ def read_data_from_yahoo(symbol: str, start: datetime.date,
     return df
 
 
+def save_gold_data(file_path: str, format: str = "%d/%m/%Y") -> None:
+    """Save data of Daily Treasury Par Yield Curve Rates in the date
+       format wanted.
+
+    Args:
+        file_path (str): file path at which is stored the file
+        format (str, optional): date format wanted.
+                                Defaults to "%d/%m/%Y". 
+    """
+    df = pd.read_csv(file_path)
+
+    df['Date'] = pd.to_datetime(df.Date, format="%m/%d/%Y").dt.strftime(format)
+    df['Date'] = pd.to_datetime(df.Date, format=format)
+
+    df = df.sort_values(by='Date').reset_index(drop=True)
+
+    df['Date'] = pd.to_datetime(df.Date).dt.strftime("%d/%m/%Y")
+    # Save data with the wanted date format
+    df.to_csv('../Data/Tresure_gold_data.csv', index=False)
+
+
 def log_return(df: pd.DataFrame, column : str = 'Adj Close') -> pd.DataFrame:
     """Compute the logarithm return.
 
