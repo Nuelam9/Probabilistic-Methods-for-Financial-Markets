@@ -33,7 +33,10 @@ def read_data_from_yahoo(symbol: str, start: datetime.date,
 
 def save_gold_data(file_path: str, format: str = "%d/%m/%Y") -> None:
     """Save data of Daily Treasury Par Yield Curve Rates in the date
-       format wanted.
+       format wanted. Data is taken from the site: 
+       https://home.treasury.gov/resource-center/data-chart-center/
+       interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr
+       _date_value=2022.
 
     Args:
         file_path (str): file path at which is stored the file
