@@ -12,6 +12,19 @@ from matplotlib.ticker import FormatStrFormatter
 from sklearn.linear_model import LinearRegression
 
 
+def int_from_str(string: str) -> int:
+    """Exctract an integer number from a string.
+
+    Args:
+        string (str): string containing a number.
+
+    Returns:
+        int: integer number inside the string.
+    """
+    num = int(''.join(filter(str.isdigit, string)))
+    return num
+
+
 def read_data_from_yahoo(symbol: str, start: datetime.date,
                          end: datetime.date) -> pd.DataFrame:
     """Read data from yahoo site and get it as dataframe object.
@@ -31,28 +44,37 @@ def read_data_from_yahoo(symbol: str, start: datetime.date,
     return df
 
 
-def save_gold_data(file_path: str, format: str = "%d/%m/%Y") -> None:
-    """Save data of Daily Treasury Par Yield Curve Rates in the date
-       format wanted. Data is taken from the site: 
+def read_gold_data(file_path: str, format: str = "%d/%m/%Y",
+                   save: bool = False) -> pd.DataFrame:
+    """Read data of Daily Treasury Par Yield Curve Rates in the date
+       format wanted. Source of the data: 
        https://home.treasury.gov/resource-center/data-chart-center/
        interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr
        _date_value=2022.
 
     Args:
-        file_path (str): file path at which is stored the file
-        format (str, optional): date format wanted.
-                                Defaults to "%d/%m/%Y". 
+        file_path (str): file path where is stored the file,
+        format (str, optional): date format wanted. Defaults to "%d/%m/%Y".
+        save (bool, optional): bool var to save data. Defaults to False.
+
+    Returns:
+        pd.DataFrame: dataframe containg the data well formatted.
     """
+
     df = pd.read_csv(file_path)
 
     df['Date'] = pd.to_datetime(df.Date, format="%m/%d/%Y").dt.strftime(format)
     df['Date'] = pd.to_datetime(df.Date, format=format)
 
     df = df.sort_values(by='Date').reset_index(drop=True)
-
     df['Date'] = pd.to_datetime(df.Date).dt.strftime("%d/%m/%Y")
-    # Save data with the wanted date format
-    df.to_csv('../Data/Tresure_gold_data.csv', index=False)
+    
+    if save:
+        # Save data with the wanted date format
+        year = int_from_str(file_path)
+        df.to_csv(f'../Data/Tresure_gold_data_{year}.csv', index=False)
+    else:
+        return df
 
 
 def log_return(df: pd.DataFrame, column : str = 'Adj Close') -> pd.DataFrame:
