@@ -1,15 +1,9 @@
-#!/usr/bin/env python3.8.10
+#!/usr/bin/env python3.10.4
 import datetime
 import numpy as np
 import pandas as pd
 from typing import Tuple
-from scipy.stats import norm
-import statsmodels.api as sm
-import pandas_datareader as pdr # Work only on ubuntu
 import matplotlib.pyplot as plt
-from statsmodels.tsa.stattools import acf, pacf
-from matplotlib.ticker import FormatStrFormatter
-from sklearn.linear_model import LinearRegression
 
 
 def int_from_str(string: str) -> int:
@@ -37,6 +31,7 @@ def read_data_from_yahoo(symbol: str, start: datetime.date,
     Returns:
         pd.DataFrame: Dataframe with data in the choosen time range.
     """
+    import pandas_datareader as pdr # Work only on ubuntu
     df = pdr.get_data_yahoo(symbols=f'{symbol}', start=start, end=end)
     df.reset_index(inplace=True, drop=False)
     # Remove last duplicated row
@@ -62,12 +57,11 @@ def read_gold_data(file_path: str, format: str = "%d/%m/%Y",
     """
 
     df = pd.read_csv(file_path)
+    # reverse the rows to get first the older date
+    df = df.iloc[::-1].reset_index(drop=True)
 
     df['Date'] = pd.to_datetime(df.Date, format="%m/%d/%Y").dt.strftime(format)
     df['Date'] = pd.to_datetime(df.Date, format=format)
-
-    df = df.sort_values(by='Date').reset_index(drop=True)
-    df['Date'] = pd.to_datetime(df.Date).dt.strftime("%d/%m/%Y")
     
     if save:
         # Save data with the wanted date format
@@ -133,6 +127,10 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
         link (str): link at with the data are taken,
         column (str, optional): df's column to plot. Defaults to 'y_plr'.
     """
+    import statsmodels.api as sm
+    from matplotlib.ticker import FormatStrFormatter
+    from sklearn.linear_model import LinearRegression
+
     if kind == 'scatter':
         marker = '.'
         ms = 3
@@ -202,6 +200,9 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
         lag_method (str, optional): method to compute the maxlag.
                                     Defaults to 'Hyndman'.
     """
+    from scipy.stats import norm
+    from statsmodels.tsa.stattools import acf, pacf
+
     z = df[column].to_numpy()
     n = len(z)
     
@@ -264,19 +265,31 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
     plt.xlim((-0.5 + start, maxlag + 0.5))
 
 
-def linear_regression(x: np.ndarray, y: np.ndarray,
-                        offset: int) -> np.ndarray:
-    """Compute the linear regression given x and y variables.
+def plot_yield_rates(df: pd.DataFrame, start_day: str, end_day: str) -> None:
+    """Plot of the Daily Treasury Par Yield Curve Rates.
 
     Args:
-        x (np.ndarray): x data,
-        y (np.ndarray): y data,
-        offset (int): offset to evaluate linear regeression.
-
-    Returns:
-        np.ndarray: linear regression.
+        df (pd.DataFrame): data,
+        start_day (str): starting day (format "%Y-%m-%d"),
+        end_day (str): ending day (format "%Y-%m-%d").
     """
-    X = x.reshape((-1, 1))
-    reg = LinearRegression().fit(X, y)
-    print(f'Intercept: {reg.intercept_}, Index: {reg.coef_[0]}')
-    return reg.intercept_ + reg.coef_[0] * range(offset + 1)
+    mask = (df.Date >= start_day) & (df.Date <= end_day)
+    tmp = df[mask].transpose()
+    tmp.columns = tmp.loc['Date']
+    tmp.drop(index='Date', inplace=True)
+    dates = tmp.columns.strftime('%Y-%m-%d')
+    n = len(dates)
+
+    link = "https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics"
+
+    fig, ax = plt.subplots(figsize=(18, 9))
+    tmp.plot(ax=ax, grid=True)
+    plt.suptitle("University of Roma \"Tor Vergata\" - Corso di Metodi"
+                + " Probabilistici e Statistici per i Mercati Finanziari \n"
+                + f" Line plots U.S. Treasury Yield Curve Rates " 
+                + f"(busines days from {start_day} to {end_day})")
+    plt.title(f"Path length {n} sample points. Data from U.S. Department of the " 
+                + f"Treasure - {link}")
+    plt.legend(labels=dates)
+    plt.xlabel('Time to maturity')
+    plt.ylabel('Yield rates')
