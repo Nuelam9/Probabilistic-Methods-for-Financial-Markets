@@ -1,2 +1,5 @@
 # Ignore Lectures folder
 R scripts/
+# Jupyter Notebook
+.ipynb_checkpoints
+.history/
