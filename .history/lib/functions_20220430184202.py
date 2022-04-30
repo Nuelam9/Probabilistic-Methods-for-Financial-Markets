@@ -163,8 +163,8 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
     plt.plot(dates, y, 'b' + marker, markersize=ms, label=f'S&P 500 {ylabel}')
     plt.plot(dates, X*reg.coef_[0] + reg.intercept_, 'lime', label='Regression Line')
     plt.plot(dates, yest_sm, 'r--', label='LOESS Curve')
-    first_day = df.loc[0, 'Date'].strftime("%Y-%m-%d")
-    last_day = df.loc[n - 1, 'Date'].strftime("%Y-%m-%d")
+    first_day = df.loc[0, 'Date']
+    last_day = df.loc[n - 1, 'Date']
     leg = plt.legend()
     fancy_legend(leg)
     x_breaks, y_breaks = fancy_binwidth(df, column)
@@ -249,7 +249,7 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
         plt.plot([-1, maxlag+1], [-CI]*2, color +'.-.', alpha=0.6)
 
     first_day = df.loc[0, 'Date'].strftime("%Y-%m-%d")
-    last_day = df.loc[n - 1, 'Date'].strftime("%Y-%m-%d")
+    last_day = df.loc[n - 1, 'Date']
     #fig.subplots_adjust(bottom=0.25)
     leg = plt.legend(loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=3)
     fancy_legend(leg)
