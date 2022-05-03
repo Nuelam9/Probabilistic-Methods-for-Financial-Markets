@@ -1,13 +1,77 @@
 #!/usr/bin/env python3.10.4
-import matplotlib
+import datetime
 import numpy as np
 import pandas as pd
 from typing import Tuple
 
 
-legend_type = matplotlib.legend.Legend
-def fancy_legend(leg: legend_type) -> None:
-    for lh in leg.legendHandles: 
+def int_from_str(string: str) -> int:
+    """Exctract an integer number from a string.
+
+    Args:
+        string (str): string containing a number.
+
+    Returns:
+        int: integer number inside the string.
+    """
+    num = int(''.join(filter(str.isdigit, string)))
+    return num
+
+
+def read_data_from_yahoo(symbol: str, start: datetime.date,
+                         end: datetime.date) -> pd.DataFrame:
+    """Read data from yahoo site and get it as dataframe object.
+
+    Args:
+        symbol (str): Stok index
+        start (datetime.date): start date,
+        end (datetime.date): end date.
+
+    Returns:
+        pd.DataFrame: Dataframe with data in the choosen time range.
+    """
+    import pandas_datareader as pdr # Work only on ubuntu
+    df = pdr.get_data_yahoo(symbols=f'{symbol}', start=start, end=end)
+    df.reset_index(inplace=True, drop=False)
+    # Remove last duplicated row
+    df = df[~df.Date.duplicated()]
+    return df
+
+
+def read_gold_data(file_path: str, format: str = "%d/%m/%Y",
+                   save: bool = False) -> pd.DataFrame:
+    """Read data of Daily Treasury Par Yield Curve Rates in the date
+       format wanted. Source of the data: 
+       https://home.treasury.gov/resource-center/data-chart-center/
+       interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr
+       _date_value=2022.
+
+    Args:
+        file_path (str): file path where is stored the file,
+        format (str, optional): date format wanted. Defaults to "%d/%m/%Y".
+        save (bool, optional): bool var to save data. Defaults to False.
+
+    Returns:
+        pd.DataFrame: dataframe containg the data well formatted.
+    """
+
+    df = pd.read_csv(file_path)
+    # reverse the rows to get first the older date
+    df = df.iloc[::-1].reset_index(drop=True)
+
+    df['Date'] = pd.to_datetime(df.Date, format="%m/%d/%Y").dt.strftime(format)
+    df['Date'] = pd.to_datetime(df.Date, format=format)
+    
+    if save:
+        # Save data with the wanted date format
+        year = int_from_str(file_path)
+        df.to_csv(f'../Data/Tresure_gold_data_{year}.csv', index=False)
+    else:
+        return df
+
+
+def fancy_legend(legend) -> None:
+    for lh in legend.legendHandles: 
         lh.set_alpha(1)
         lh.set_linewidth(1)
 
