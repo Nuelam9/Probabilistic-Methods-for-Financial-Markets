@@ -3,3 +3,4 @@ R scripts/
 # Jupyter Notebook
 .ipynb_checkpoints
 .history/
+.history/lib/
