@@ -1,8 +1,8 @@
-from matplotlib.pyplot import legend
+#!/usr/bin/env python3.10.4
+import matplotlib
 import numpy as np
 import pandas as pd
 from typing import Tuple
-import matplotlib
 
 
 legend_type = matplotlib.legend.Legend
