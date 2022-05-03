@@ -1,5 +1,11 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Ignore Lectures folder
 R scripts/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 .history/
