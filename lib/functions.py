@@ -2,7 +2,7 @@
 import datetime
 import numpy as np
 import pandas as pd
-from typing import Tuple
+from utils import *
 import matplotlib.pyplot as plt
 
 
@@ -93,29 +93,6 @@ def log_return(df: pd.DataFrame, column : str = 'Adj Close') -> pd.DataFrame:
     return df
 
 
-def fancy_legend(leg):
-    for lh in leg.legendHandles: 
-        lh.set_alpha(1)
-        lh.set_linewidth(1)
-
-
-def fancy_binwidth(df: pd.DataFrame, col: str = 'y_plr',
-                   x_breaks_num: int = 15,
-                   y_breaks_num: int = 10) -> Tuple[np.ndarray, np.ndarray]:
-    x = df.index
-    x_breaks_low = min(x)
-    x_breaks_up = max(x)
-    x_binwidth = np.ceil((x_breaks_up - x_breaks_low) / x_breaks_num)
-    x_breaks = np.arange(x_breaks_low, x_breaks_up, x_binwidth, dtype='int')
-
-    y = df[col]
-    y_binwidth = round((max(y) - min(y)) / y_breaks_num, 3)
-    y_breaks_low = np.floor((min(y) / y_binwidth)) * y_binwidth
-    y_breaks_up = np.ceil((max(y) / y_binwidth)) * y_binwidth
-    y_breaks = np.round(np.arange(y_breaks_low, y_breaks_up, y_binwidth), 3)
-    return x_breaks, y_breaks
-
-
 def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
                        link: str, column : str = 'y_plr') -> None:
     """Scatter plot of column variable with the regression line and 
@@ -158,7 +135,7 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
     print(f'Intercept: {reg.intercept_}, Index: {reg.coef_[0]}')
 
     n = len(y)
-    fig, ax = plt.subplots(figsize=(15, 9), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(18, 9), constrained_layout=True)
     dates = df['Date']
     plt.plot(dates, y, 'b' + marker, markersize=ms, label=f'S&P 500 {ylabel}')
     plt.plot(dates, X*reg.coef_[0] + reg.intercept_, 'lime', label='Regression Line')
@@ -204,6 +181,7 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
     from scipy.stats import norm
     from statsmodels.tsa.stattools import acf, pacf
 
+    df.reset_index(drop=True, inplace=True)
     z = df[column].to_numpy()
     n = len(z)
     
@@ -221,20 +199,30 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
         Aut_Fun_z = pacf(z, nlags=maxlag)[1:]
         start = 1
         yticks = np.arange(-0.1, 0.1, 0.1)
+        
+        if squared:
+            z = df[column].to_numpy() ** 2.
+            string += 'Squared '            
+
+        # fft = False to avoid warning
+        Aut_Fun_z = pacf(z, nlags=maxlag    )[1:]
+        start = 0
+        yticks = np.arange(0, 1.25, 0.25)        
+        
     else:
         kind = 'Autocorrelogram'
         ylabel = 'Acf value'
 
         if squared:
             z = df[column].to_numpy() ** 2.
-            string = ' Squared'            
+            string += 'Squared '            
 
         # fft = False to avoid warning
         Aut_Fun_z = acf(z, nlags=maxlag, fft=False)
         start = 0
         yticks = np.arange(0, 1.25, 0.25)
 
-    fig, ax = plt.subplots(figsize=(15, 8))
+    fig, ax = plt.subplots(figsize=(18, 8))
     plt.grid()
     for i, y in enumerate(Aut_Fun_z, start=start):
         if y > 0:
