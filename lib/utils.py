@@ -14,8 +14,7 @@ def int_from_str(string: str) -> int:
     Returns:
         int: integer number inside the string.
     """
-    num = int(''.join(filter(str.isdigit, string)))
-    return num
+    return int(''.join(filter(str.isdigit, string)))
 
 
 def read_data_from_yahoo(symbol: str, start: datetime.date,
@@ -76,18 +75,18 @@ def fancy_legend(legend) -> None:
         lh.set_linewidth(1)
 
 
-def fancy_binwidth(df: pd.DataFrame, col: str = 'y_plr',
-                   x_breaks_num: int = 15,
-                   y_breaks_num: int = 10) -> Tuple[np.ndarray, np.ndarray]:
-    x = df.index
-    x_breaks_low = min(x)
-    x_breaks_up = max(x)
-    x_binwidth = np.ceil((x_breaks_up - x_breaks_low) / x_breaks_num)
-    x_breaks = np.arange(x_breaks_low, x_breaks_up, x_binwidth, dtype='int')
+def fancy_binwidth(df: pd.DataFrame, X: str, Y: str,
+                   x_breaks_num: int = 10, x_prec: int = 4,
+                   y_breaks_num: int = 10,
+                   y_prec: int = 4) -> Tuple[np.ndarray, np.ndarray]:
+    x_breaks = get_variable_bins(df, X, x_breaks_num, x_prec)
+    y_breaks = get_variable_bins(df, Y, y_breaks_num, y_prec)
+    return x_breaks[1:], y_breaks[1:]
 
-    y = df[col]
-    y_binwidth = round((max(y) - min(y)) / y_breaks_num, 3)
-    y_breaks_low = np.floor((min(y) / y_binwidth)) * y_binwidth
-    y_breaks_up = np.ceil((max(y) / y_binwidth)) * y_binwidth
-    y_breaks = np.round(np.arange(y_breaks_low, y_breaks_up, y_binwidth), 3)
-    return x_breaks, y_breaks
+
+def get_variable_bins(df, X, Y, prec):
+    var = df[X]
+    var_binwidth = round((max(var) - min(var)) / Y, prec)
+    var_breaks_low = np.floor((min(var) / var_binwidth)) * var_binwidth
+    var_breaks_up = np.ceil((max(var) / var_binwidth)) * var_binwidth
+    return np.round(np.arange(var_breaks_low, var_breaks_up, var_binwidth), prec)
