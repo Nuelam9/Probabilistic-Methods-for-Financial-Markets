@@ -73,6 +73,7 @@ def data_visualization(df: pd.DataFrame, kind: str, symbol: str,
                 + f"{symbol} - {link}")
 
 
+# TODO split this function in multiple functions 
 def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
                     partial: bool = False, squared: bool = False, 
                     column: str = 'y_plr',
@@ -97,7 +98,7 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
     df.reset_index(drop=True, inplace=True)
     z = df[column].to_numpy()
     n = len(z)
-    
+
     if lag_method == 'Default':
         maxlag = np.ceil(10. * np.log10(n))
     elif lag_method == 'Box-Jenkins':
@@ -112,16 +113,13 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
         Aut_Fun_z = pacf(z, nlags=maxlag)[1:]
         start = 1
         yticks = np.arange(-0.1, 0.1, 0.1)
-        
+
         if squared:
             z = df[column].to_numpy() ** 2.
             string += 'Squared '            
 
         # fft = False to avoid warning
         Aut_Fun_z = pacf(z, nlags=maxlag    )[1:]
-        start = 0
-        yticks = np.arange(0, 1.25, 0.25)        
-        
     else:
         kind = 'Autocorrelogram'
         ylabel = 'Acf value'
@@ -132,9 +130,9 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
 
         # fft = False to avoid warning
         Aut_Fun_z = acf(z, nlags=maxlag, fft=False)
-        start = 0
-        yticks = np.arange(0, 1.25, 0.25)
+    yticks = np.arange(0, 1.25, 0.25)        
 
+    start = 0
     fig, ax = plt.subplots(figsize=(18, 8))
     plt.grid()
     for i, y in enumerate(Aut_Fun_z, start=start):
@@ -142,7 +140,7 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
             plt.vlines(x=i, ymax=y, ymin=0, colors='k')
         elif y < 0:
             plt.vlines(x=i, ymax=0, ymin=y, colors='k')
-    
+
     for ci, color in zip(['0.90', '0.95', '0.99'], ['r', 'b', 'g']):
         CI = norm.ppf((1. + float(ci)) / 2.) / np.sqrt(n)
         text = f"ci {int(float(ci) * 100.)}%"  
@@ -155,7 +153,7 @@ def autocorrelogram(df: pd.DataFrame, symbol: str, link: str,
     leg = plt.legend(loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=3)
     fancy_legend(leg)
     plt.xlabel('Lag')
-    plt.ylabel(ylabel)   
+    plt.ylabel(ylabel)
     plt.suptitle("University of Roma \"Tor Vergata\" - Corso di Metodi"
                + " Probabilistici e Statistici per i Mercati Finanziari \n"
                + f" {kind} of S&P 500{string}Percentage Logarithm Returns"
@@ -186,10 +184,11 @@ def plot_yield_rates(df: pd.DataFrame, start_day: str, end_day: str) -> None:
 
     fig, ax = plt.subplots(figsize=(18, 9))
     tmp.plot(ax=ax, grid=True)
-    plt.suptitle("University of Roma \"Tor Vergata\" - Corso di Metodi"
-                + " Probabilistici e Statistici per i Mercati Finanziari \n"
-                + f" Line plots U.S. Treasury Yield Curve Rates " 
-                + f"(busines days from {start_day} to {end_day})")
+    plt.suptitle((("University of Roma \"Tor Vergata\" - Corso di Metodi" \
+        + " Probabilistici e Statistici per i Mercati Finanziari \n" \
+            + " Line plots U.S. Treasury Yield Curve Rates ") \
+                + f"(busines days from {start_day} to {end_day})"))
+
     plt.title(f"Path length {n} sample points. Data from U.S. Department of the " 
                 + f"Treasure - {link}")
     plt.legend(labels=dates)
